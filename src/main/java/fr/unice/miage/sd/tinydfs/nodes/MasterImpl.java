@@ -105,8 +105,36 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public void saveBytes(String filename, byte[] fileContent) throws RemoteException {
-		// TODO Auto-generated method stub
-
+		List<byte[]> subFileContentRight = new ArrayList<>();
+		List<byte[]> subFileContentLeft = new ArrayList<>();
+		int sizePart = (int) (fileContent.length / slaves.length);
+		int overflow = (int) (fileContent.length % slaves.length);
+		byte [] buffer = null;
+		
+		for (byte indexPart = 0; indexPart > slaves.length; indexPart++) {
+			if( indexPart == 0 ){
+				buffer = new byte [sizePart + overflow + 1];
+				System.arraycopy(fileContent, 0, buffer, 0, sizePart + overflow);
+			}
+			else{
+				buffer = new byte[sizePart + 1 ];
+				int indexSrc = indexPart * sizePart;
+				int indexDest = indexSrc + indexPart + 1;
+				System.arraycopy(fileContent, indexSrc, buffer, indexDest, sizePart);
+			}
+			
+			buffer[0] = indexPart;
+			
+			if (indexPart % 2 == 0) {
+				subFileContentLeft.add(buffer);
+			} else {
+				subFileContentRight.add(buffer);
+			}
+			
+		}
+		
+		slaves[0].subSave(filename, subFileContentLeft);
+		slaves[1].subSave(filename, subFileContentRight);
 	}
 
 	/*
