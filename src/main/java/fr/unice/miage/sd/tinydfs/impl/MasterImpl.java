@@ -16,6 +16,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	private int nbSlaves;
 	
 	public MasterImpl(String storageServiceName, String rootFoler, int nbSlaves) throws RemoteException {
+		super();
 		this.storageServiceName = storageServiceName;
 		this.rootFolder = rootFoler;
 		this.nbSlaves = nbSlaves;

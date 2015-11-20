@@ -20,8 +20,8 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 	private String dfsRootFolder;
 	private int slaveId;
 
-	private Slave slaveLeft;
-	private Slave slaveRight;
+	private Slave slaveLeft = null;
+	private Slave slaveRight = null;
 
 	public SlaveImpl(String masterHost, String dfsRootFolder, int slaveId) throws RemoteException {
 		super();
@@ -29,14 +29,30 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 		this.dfsRootFolder = dfsRootFolder;
 		this.slaveId = slaveId;
 		
-		try {
-			slaveLeft = (Slave) Naming.lookup("rmi://" +masterHost + "/" + "slave"+2*slaveId);
-			slaveRight = (Slave) Naming.lookup("rmi://" +masterHost + "/" + "slave"+(2*slaveId + 1));
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (NotBoundException e) {
-			e.printStackTrace();
-		}
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}
+
+				try {
+					slaveLeft = (Slave) Naming.lookup("rmi://" +SlaveImpl.this.masterHost + "/" + "slave"+2*SlaveImpl.this.slaveId);
+					slaveRight = (Slave) Naming.lookup("rmi://" +SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId + 1));
+				} catch (MalformedURLException e) {
+					e.printStackTrace();
+				} catch (NotBoundException e) {
+					e.printStackTrace();
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
+		
 	}
 
 	@Override
