@@ -18,12 +18,10 @@ public class SlaveMain {
 		// Create slave and register it (registration name must be "slave" + slave identifier)
 		try {
 			SlaveImpl slave = new SlaveImpl(masterHost, dfsRootFolder, slaveId);
-			Naming.bind("slave"+slaveId, slave);
+			Naming.rebind("rmi://" + masterHost + "/" + "slave" +slaveId, slave);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (AlreadyBoundException e) {
 			e.printStackTrace();
 		}
 	}

@@ -1,5 +1,14 @@
 package fr.unice.miage.sd.tinydfs.main;
 
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+import fr.unice.miage.sd.tinydfs.impl.MasterImpl;
+import fr.unice.miage.sd.tinydfs.nodes.Master;
+import fr.unice.miage.sd.tinydfs.tests.config.Constants;
 
 public class MasterMain {
 
@@ -10,7 +19,18 @@ public class MasterMain {
 		int nbSlaves = Integer.parseInt(args[2]);
 		
 		// Create master and register it
+		
+		try {
 
+			LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
+			Master master = new MasterImpl(storageServiceName, dfsRootFolder, nbSlaves);
+			Naming.rebind("rmi://localhost/" + Constants.SERVICE_NAME_PROPERTY_KEY, master);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
 	}
 	
 }

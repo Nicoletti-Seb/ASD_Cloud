@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardOpenOption;import java.nio.file.attribute.FileAttribute;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -19,6 +19,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 	private String masterHost;
 	private String dfsRootFolder;
 	private int slaveId;
+	private File slaveDir;
 
 	private Slave slaveLeft = null;
 	private Slave slaveRight = null;
@@ -29,13 +30,24 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 		this.dfsRootFolder = dfsRootFolder;
 		this.slaveId = slaveId;
 		
+		// Créer le répertoire propre au Slave
+		//
+		try {
+			slaveDir = new File(dfsRootFolder, String.valueOf(slaveId));
+			if(slaveDir.exists()) slaveDir.delete();
+			
+			Files.createDirectory(slaveDir.toPath());
+		} catch (IOException e2) {
+			e2.printStackTrace();
+		}
+		
 		new Thread(new Runnable() {
 			
 			@Override
 			public void run() {
 				
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(2500);
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
 				}
@@ -155,7 +167,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	private byte[] getByteArray(String filename) {
 
-		File f = new File(dfsRootFolder, filename);
+		File f = new File(slaveDir, filename);
 
 		if(f.exists()) {
 
@@ -173,12 +185,12 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	private void saveByteArray(String filename, byte[] content) {
 
-		File f = new File(dfsRootFolder, filename);
+		File f = new File(slaveDir, filename);
 
 		if(f.exists()) f.delete();
 
 		try {
-			Files.write(f.toPath(), content, StandardOpenOption.CREATE);
+			Files.write(f.toPath(), content, StandardOpenOption.CREATE_NEW);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
