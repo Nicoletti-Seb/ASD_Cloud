@@ -8,7 +8,6 @@ import java.rmi.registry.Registry;
 
 import fr.unice.miage.sd.tinydfs.impl.MasterImpl;
 import fr.unice.miage.sd.tinydfs.nodes.Master;
-import fr.unice.miage.sd.tinydfs.tests.config.Constants;
 
 public class MasterMain {
 
@@ -24,7 +23,7 @@ public class MasterMain {
 
 			LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
 			Master master = new MasterImpl(storageServiceName, dfsRootFolder, nbSlaves);
-			Naming.rebind("rmi://localhost/" + Constants.SERVICE_NAME_PROPERTY_KEY, master);
+			Naming.rebind("rmi://localhost/" + storageServiceName, master);
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

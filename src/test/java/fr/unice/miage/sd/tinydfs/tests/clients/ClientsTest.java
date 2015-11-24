@@ -89,8 +89,9 @@ public class ClientsTest {
 	public void binaryClientTest() {
 		File expectedFile = new File(this.getClass().getResource(
 				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
-		Path path = Paths.get(this.getClass().getResource(
-				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
+		//Path path = Paths.get(this.getClass().getResource(
+		//		Constants.BINARY_SAMPLE_FILE_PATH).getFile());
+		Path path = expectedFile.toPath();
 		BufferedOutputStream bos = null;
 		File retrievedFile = null;
 

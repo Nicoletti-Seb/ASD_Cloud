@@ -5,7 +5,9 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 
+import fr.unice.miage.sd.tinydfs.impl.Logger;
 import fr.unice.miage.sd.tinydfs.impl.SlaveImpl;
+import fr.unice.miage.sd.tinydfs.nodes.Slave;
 
 public class SlaveMain { 
 	
@@ -17,7 +19,7 @@ public class SlaveMain {
 		
 		// Create slave and register it (registration name must be "slave" + slave identifier)
 		try {
-			SlaveImpl slave = new SlaveImpl(masterHost, dfsRootFolder, slaveId);
+			Slave slave = new SlaveImpl(masterHost, dfsRootFolder, slaveId);
 			Naming.rebind("rmi://" + masterHost + "/" + "slave" +slaveId, slave);
 		} catch (RemoteException e) {
 			e.printStackTrace();
