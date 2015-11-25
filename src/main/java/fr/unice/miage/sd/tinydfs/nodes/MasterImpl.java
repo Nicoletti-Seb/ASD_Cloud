@@ -1,13 +1,16 @@
 package fr.unice.miage.sd.tinydfs.nodes;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -143,7 +146,55 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public File retrieveFile(String filename) throws RemoteException {
-		// TODO Auto-generated method stub
+		List<byte[]> subFileContentLeft = slaves[0].subRetrieve(filename);
+		List<byte[]> subFileContentRight = slaves[1].subRetrieve(filename);
+		
+		if( subFileContentLeft.isEmpty() || subFileContentRight.isEmpty() ){
+			return null;
+		}
+		
+		try {
+			File file = new File( dfsRootFolder + "/" + filename);
+			file.createNewFile();
+			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
+			
+			for( byte indexPart = 0; indexPart < slaves.length; indexPart++){
+				byte[] data = null;
+				if( indexPart % 2 == 0 ){
+					data = popFileBlockAtIndex(indexPart, subFileContentLeft);
+				}
+				else{
+					data = popFileBlockAtIndex(indexPart, subFileContentRight);
+				}
+				bos.write(data, 1, data.length);
+			}
+			
+			bos.close();
+			return file;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Search and pop the memory block with index 'indexPart'
+	 * @param indexPart
+	 * @param list
+	 * @return the memory block with indexPart, else null
+	 */
+	private byte[] popFileBlockAtIndex(byte indexPart, List<byte[]> list){
+		Iterator<byte[]> i = list.iterator();
+		
+		while(i.hasNext()){
+			byte []block = i.next();
+			if( block[0] == indexPart ){
+				i.remove();
+				return block;
+			}
+		}
+		
 		return null;
 	}
 
