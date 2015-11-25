@@ -2,6 +2,7 @@ package fr.unice.miage.sd.tinydfs.nodes;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -204,8 +205,27 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public byte[] retrieveBytes(String filename) throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
+		List<byte[]> subFileContentLeft = slaves[0].subRetrieve(filename);
+		List<byte[]> subFileContentRight = slaves[1].subRetrieve(filename);
+		
+		if( subFileContentLeft.isEmpty() || subFileContentRight.isEmpty() ){
+			return null;
+		}
+		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		
+		for( byte indexPart = 0; indexPart < slaves.length; indexPart++){
+			byte[] data = null;
+			if( indexPart % 2 == 0 ){
+				data = popFileBlockAtIndex(indexPart, subFileContentLeft);
+			}
+			else{
+				data = popFileBlockAtIndex(indexPart, subFileContentRight);
+			}
+			baos.write(data, 1, data.length);
+		}
+		
+		return baos.toByteArray();
 	}
 
 }
