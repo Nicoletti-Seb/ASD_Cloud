@@ -5,8 +5,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.LinkedList;
 import java.util.List;
 
 public class SlaveImpl extends UnicastRemoteObject implements Slave {
@@ -97,8 +101,37 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	@Override
 	public List<byte[]> subRetrieve(String filename) throws RemoteException {
-		// TODO Auto-generated method stub
+		File file = new File(dfsRootFolder + "/" + filename);
+		if (!file.exists()){
+			return null;
+		}
+		
+		List<byte[]> dataList = null;
+		if( slaveL == null || slaveR == null ){
+			dataList = new LinkedList<>();
+		}
+		else{
+			dataList = slaveL.subRetrieve(filename);
+			dataList.addAll(slaveR.subRetrieve(filename));
+		}
+		dataList.add(readFile(filename));
+		
+		return dataList;
+	}
+	
+	/**
+	 * Read all data in a file
+	 * @param filename
+	 * @return
+	 */
+	private byte[] readFile(String filename){
+		try {
+			Path path = Paths.get("file:///" + dfsRootFolder + "/" + filename );
+			return Files.readAllBytes(path);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		return null;
 	}
-
 }
