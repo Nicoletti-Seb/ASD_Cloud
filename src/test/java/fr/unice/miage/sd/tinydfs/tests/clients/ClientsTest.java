@@ -22,6 +22,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import junitx.framework.FileAssert;
+import fr.unice.miage.sd.tinydfs.impl.Logger;
 import fr.unice.miage.sd.tinydfs.nodes.Master;
 import fr.unice.miage.sd.tinydfs.tests.config.Constants;
 
@@ -153,7 +154,7 @@ public class ClientsTest {
 			File dfsRootFolder = new File(dfsRootFolderPath);
 			File[] folderFiles = dfsRootFolder.listFiles();
 			int expectedNbFiles = master.getNbSlaves() * 2 + 2;
-			Assert.assertTrue(folderFiles.length == expectedNbFiles);;
+			Assert.assertTrue(folderFiles.length == expectedNbFiles);
 			for (File file: folderFiles) {
 				Assert.assertTrue(file.lastModified() > testStartTime);
 			}

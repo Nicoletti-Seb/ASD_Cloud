@@ -1,5 +1,6 @@
 package fr.unice.miage.sd.tinydfs.impl;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -69,7 +70,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		try {
 			slaveLeft = (Slave) Naming.lookup("rmi://localhost/slave0");
 			slaveRight = (Slave) Naming.lookup("rmi://localhost/slave1");
-
+			
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (RemoteException e) {
@@ -83,21 +84,31 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 		List<byte[]> result = new LinkedList<byte[]>();
 
-		int lengthOfPart = (array.length - array.length % nbSlaves) / nbSlaves;
+		int diff = array.length % nbSlaves;
+		int lengthOfPart = (array.length - diff) / nbSlaves;
+		int currentIndex = 0;
 
 		for(int i = 0; i < nbSlaves; i++) {
 
-			if(i < nbSlaves - 1) {
-
-				result.add(Arrays.copyOfRange(array, i*lengthOfPart, i*lengthOfPart + lengthOfPart));
-
+			if(diff > 0) {
+				
+				result.add(Arrays.copyOfRange(array, currentIndex, currentIndex + lengthOfPart + 1));
+				diff--;
+				currentIndex += lengthOfPart + 1;
+				
 			} else {
-
-				result.add(Arrays.copyOfRange(array, i*lengthOfPart, array.length));
+				
+				result.add(Arrays.copyOfRange(array, currentIndex, currentIndex + lengthOfPart));
+				currentIndex += lengthOfPart;
+				
 			}
+			
 		}
 
-		Logger.getInstance().log("result : " + result.size() + " " + result.toString());
+		for(byte[] bArray : result) {
+			Logger.getInstance().log("bArray : " + bArray.length);
+		}
+		
 		
 		return result;
 
@@ -136,6 +147,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		try {
 			slaveLeft.subSave(filename, leftList);
 			slaveRight.subSave(filename, rightList);
+			
+
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -173,7 +186,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	private List<byte[]> getTotalList(String filename) throws RemoteException {
 
 		List<byte[]> leftList = slaveLeft.subRetrieve(filename);
-		List<byte[]> rightList = slaveLeft.subRetrieve(filename);
+		List<byte[]> rightList = slaveRight.subRetrieve(filename);
 
 		if(leftList == null || rightList == null) return null;
 
@@ -192,6 +205,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 			result += byteArray.length;
 		}
 
+		Logger.getInstance().log("MasterImpl getSizeOfList : " + result);
+		
 		return result;
 
 	}
@@ -205,14 +220,20 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	private byte[] getByteArrayFromList(List<byte[]> bytes) {
 
-		byte[] result = new byte[getSizeOfList(bytes)];
-
+		ByteArrayOutputStream baos = new ByteArrayOutputStream(getSizeOfList(bytes));
+		
 		for(byte[] byteArray : bytes) {
-			result = ArrayUtils.addAll(result, byteArray);
+			baos.write(byteArray, 0, byteArray.length);
 		}
 
-		return result;
+		return baos.toByteArray();
 
+	}
+
+	@Override
+	public long getSize(String filename) throws RemoteException {
+		
+		return slaveLeft.getSize(filename) + slaveRight.getSize(filename);
 	}
 
 }

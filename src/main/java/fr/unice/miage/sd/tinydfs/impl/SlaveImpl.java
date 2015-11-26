@@ -1,6 +1,7 @@
 package fr.unice.miage.sd.tinydfs.impl;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -19,7 +20,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 	private String masterHost;
 	private String dfsRootFolder;
 	private int slaveId;
-	private File slaveDir;
+	//private File slaveDir;
 
 	private Slave slaveLeft = null;
 	private Slave slaveRight = null;
@@ -32,6 +33,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 		// Créer le répertoire propre au Slave
 		//
+		/*
 		try {
 			slaveDir = new File(dfsRootFolder, String.valueOf(slaveId));
 			if(!slaveDir.exists()) {
@@ -39,7 +41,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 			}
 		} catch (IOException e2) {
 			e2.printStackTrace();
-		}
+		}*/
 
 		new Thread(new Runnable() {
 
@@ -109,18 +111,16 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 	public void subSave(String filename, List<byte[]> subFileContent) throws RemoteException {
 
 		int index = getIndexOfFirstContentNotNull(subFileContent);
+
 		if(index != -1) {
 
 			saveByteArray(filename, subFileContent.get(index));
-			Logger.getInstance().log("SlaveImpl " + getId() + " saveByteArray");
-			subFileContent.set(index, null);
+			subFileContent.remove(index);
 
-			if(!isListNull(subFileContent)) {
+			if(subFileContent.size() > 1) {
 
-				List<byte[]> leftList = new LinkedList<byte[]>();
-				List<byte[]> rightList = new LinkedList<byte[]>();
-
-				splitContentList(subFileContent, leftList, rightList);
+				List<byte[]> leftList = new LinkedList<byte[]>(subFileContent.subList(0, subFileContent.size()/2));
+				List<byte[]> rightList = new LinkedList<byte[]>(subFileContent.subList(subFileContent.size()/2, subFileContent.size()));
 
 				if(getLeftSlave() != null && getRightSlave() != null) {
 					getLeftSlave().subSave(filename, leftList);
@@ -132,18 +132,6 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	}
 
-	private void splitContentList(List<byte[]> subFileContent, List<byte[]> leftList, List<byte[]> rightList) {
-
-		for(int i = 0; i < subFileContent.size(); i++) {
-
-			if(i % 2 == 0) {
-				leftList.add(subFileContent.get(i));
-			} else {
-				rightList.add(subFileContent.get(i));
-			}
-		}
-
-	}
 
 	private int getIndexOfFirstContentNotNull(List<byte[]> subFileContent) {
 
@@ -154,18 +142,11 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 		return -1;
 	}
 
-	private boolean isListNull(List<byte[]> subFileContent) {
-
-		for(byte[] content : subFileContent) {
-			if(content != null) return false;
-		}
-
-		return true;
-	}
-
 	@Override
 	public List<byte[]> subRetrieve(String filename) throws RemoteException {
 
+		Logger.getInstance().log("SlaveImpl " + getId() + " subRetrieve : Left : " + (getLeftSlave() == null ? "null" : getLeftSlave().getId()) + " Right : " + (getRightSlave() == null ? "null" : getRightSlave().getId()));
+		
 		List<byte[]> result = new LinkedList<byte[]>();
 
 		result.add(getByteArray(filename));
@@ -179,21 +160,17 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	private byte[] getByteArray(String filename) {
 
-		File f = new File(slaveDir, filename);
-
+		File f = new File(dfsRootFolder, filename + slaveId);
+		
+		
 		if(f.exists()) {
-			Logger.getInstance().log("SlaveImpl getByArray File exists");
 			try {
+				Logger.getInstance().log("SlaveImpl " + getId() + " getByArray : " + Files.readAllBytes(f.toPath()).length);
 				return Files.readAllBytes(f.toPath());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 
-		}
-		try {
-			Logger.getInstance().log("SlaveImpl " + getId() + " getByArray File exists");
-		} catch (RemoteException e) {
-			e.printStackTrace();
 		}
 
 		return null;
@@ -202,17 +179,35 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	private void saveByteArray(String filename, byte[] content) {
 
-		File f = new File(slaveDir, filename);
+		File f = new File(dfsRootFolder, filename + slaveId);
 
 		if(f.exists()) f.delete();
 
 		try {
-			Files.write(f.toPath(), content, StandardOpenOption.CREATE_NEW);
+			Logger.getInstance().log("SlaveImpl " + getId() + " saveByteArray : " + content.length);
+		} catch (RemoteException e1) {
+			e1.printStackTrace();
+		}
+		try {
+			Files.write(f.toPath(), content, StandardOpenOption.CREATE);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 
+	}
+	
+	@Override
+	public long getSize(String filename) throws RemoteException {
+		
+		List<byte[]> file = subRetrieve(filename);
+		
+		long result = 0;
+		for(byte[] bArray : file) {
+			result += bArray.length;
+		}
+		
+		return result;
 	}
 
 }
