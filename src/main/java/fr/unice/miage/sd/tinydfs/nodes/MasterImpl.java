@@ -34,7 +34,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 * @throws RemoteException
 	 *             the remote exception
 	 */
-	protected MasterImpl(int nbSlaves, String dfsRootFolder) throws RemoteException {
+	public MasterImpl(int nbSlaves, String dfsRootFolder) throws RemoteException {
 		super();
 		this.slaves = new Slave[nbSlaves];
 		this.dfsRootFolder = dfsRootFolder;
