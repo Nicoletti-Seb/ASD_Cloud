@@ -8,8 +8,13 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.stream.Stream;
 
+// Classe Logger
+// Classe de service pour logger des évènements dans un fichier texte.
+//
 public class Logger {
 
+	// Utilisation du design patern Singleton
+	//
 	private static Logger instance;
 
 	private static File file;
@@ -37,6 +42,10 @@ public class Logger {
 		return instance;
 	}
 
+	/*
+	 * Méthode log
+	 * Ecrire une chaine de caractère dans le fichier de log
+	 */
 	public void log(String toLog) {
 
 		try {
@@ -46,13 +55,4 @@ public class Logger {
 		}
 	}
 	
-	public PrintStream getPrintStream() {
-		try {
-			return new PrintStream(file);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		
-		return null;
-	}
 }

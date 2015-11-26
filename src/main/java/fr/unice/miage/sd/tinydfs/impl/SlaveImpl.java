@@ -20,7 +20,6 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 	private String masterHost;
 	private String dfsRootFolder;
 	private int slaveId;
-	//private File slaveDir;
 
 	private Slave slaveLeft = null;
 	private Slave slaveRight = null;
@@ -31,18 +30,11 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 		this.dfsRootFolder = dfsRootFolder;
 		this.slaveId = slaveId;
 
-		// Créer le répertoire propre au Slave
-		//
 		/*
-		try {
-			slaveDir = new File(dfsRootFolder, String.valueOf(slaveId));
-			if(!slaveDir.exists()) {
-				Files.createDirectory(slaveDir.toPath());
-			}
-		} catch (IOException e2) {
-			e2.printStackTrace();
-		}*/
-
+		 * Thread d'attente de l'ajout de tous les Slaves au RMI
+		 * Récupération du slave de droite et de gauche à l'aide de la formule 
+		 * SlaveLeft = 2*idSlave + 2 ; SlaveRight = 2*idSlave + 3
+		 */
 		new Thread(new Runnable() {
 
 			@Override
@@ -59,6 +51,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 					try {
 						slaveLeft = (Slave) Naming.lookup("rmi://" +SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId +2));
 					} catch(NotBoundException e) {
+						// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
 						//e.printStackTrace();
 						slaveLeft = null;
 					}
@@ -66,6 +59,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 					try {
 						slaveRight = (Slave) Naming.lookup("rmi://" +SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId + 3));
 					} catch(NotBoundException e) {
+						// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
 						//e.printStackTrace();
 						slaveRight = null;
 					}
@@ -107,49 +101,54 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	}
 
+	/*
+	 * Sauvegarde des tableau de byte de façon récursive et ordonnée.
+	 */
 	@Override
 	public void subSave(String filename, List<byte[]> subFileContent) throws RemoteException {
 
-		int index = getIndexOfFirstContentNotNull(subFileContent);
+		// Sauvegarde puis suppression du premier élément de la liste
+		//
+		saveByteArray(filename, subFileContent.get(0));
+		subFileContent.remove(0);
 
-		if(index != -1) {
+		// Si la liste contient au moins 2 éléments.
+		// Le cas où la liste ne contient qu'un seul élément ne peut se produire dans ce cas puisque nous travaillons sur des arbres binaires
+		// où chaque niveau est complet.
+		//
+		if(subFileContent.size() > 1) {
 
-			saveByteArray(filename, subFileContent.get(index));
-			subFileContent.remove(index);
+			// Découpage de la liste en 2 parties égales
+			//
+			List<byte[]> leftList = new LinkedList<byte[]>(subFileContent.subList(0, subFileContent.size()/2));
+			List<byte[]> rightList = new LinkedList<byte[]>(subFileContent.subList(subFileContent.size()/2, subFileContent.size()));
 
-			if(subFileContent.size() > 1) {
-
-				List<byte[]> leftList = new LinkedList<byte[]>(subFileContent.subList(0, subFileContent.size()/2));
-				List<byte[]> rightList = new LinkedList<byte[]>(subFileContent.subList(subFileContent.size()/2, subFileContent.size()));
-
-				if(getLeftSlave() != null && getRightSlave() != null) {
-					getLeftSlave().subSave(filename, leftList);
-					getRightSlave().subSave(filename, rightList);
-				}
-
+			// Sauvegarde des morceaux de liste
+			//
+			if(getLeftSlave() != null && getRightSlave() != null) {
+				getLeftSlave().subSave(filename, leftList);
+				getRightSlave().subSave(filename, rightList);
 			}
+
 		}
 
 	}
 
-
-	private int getIndexOfFirstContentNotNull(List<byte[]> subFileContent) {
-
-		for(int i = 0; i < subFileContent.size(); i++) {
-			if(subFileContent.get(i) != null) return i;
-		}
-
-		return -1;
-	}
-
+	/*
+	 * Récupérer de façon récursive les morceau du fichier demandé
+	 */
 	@Override
 	public List<byte[]> subRetrieve(String filename) throws RemoteException {
 
-		Logger.getInstance().log("SlaveImpl " + getId() + " subRetrieve : Left : " + (getLeftSlave() == null ? "null" : getLeftSlave().getId()) + " Right : " + (getRightSlave() == null ? "null" : getRightSlave().getId()));
-		
 		List<byte[]> result = new LinkedList<byte[]>();
 
+		// Ajout du morceau de fichier du Slave courrant
+		//
 		result.add(getByteArray(filename));
+		
+		// Ajout des morceaux de fichier du slave de gauche et droite
+		// Tant que le Slave courrant a des sous Slave.
+		//
 		if(getLeftSlave() != null && getRightSlave() != null) {
 			result.addAll(getLeftSlave().subRetrieve(filename));
 			result.addAll(getRightSlave().subRetrieve(filename));
@@ -158,14 +157,19 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 		return result.contains(null) ? null : result;
 	}
 
+	/*
+	 * Récupérer un tableau de byte depuis un nom de fichier
+	 */
 	private byte[] getByteArray(String filename) {
 
+		// Récupération du fichier concerné
+		//
 		File f = new File(dfsRootFolder, filename + slaveId);
-		
-		
+
+		// Si le fichier existe on retourne son contenu
+		//
 		if(f.exists()) {
 			try {
-				Logger.getInstance().log("SlaveImpl " + getId() + " getByArray : " + Files.readAllBytes(f.toPath()).length);
 				return Files.readAllBytes(f.toPath());
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -177,17 +181,22 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	}
 
+	/*
+	 * Sauvegarde d'un tableau de byte dans un fichier
+	 */
 	private void saveByteArray(String filename, byte[] content) {
 
+		// Récupération du fichier concerné
+		//
 		File f = new File(dfsRootFolder, filename + slaveId);
 
+		// Si le fichier existe on le supprime
+		// La dernière sauvegarde ayant la priorité
+		//
 		if(f.exists()) f.delete();
 
-		try {
-			Logger.getInstance().log("SlaveImpl " + getId() + " saveByteArray : " + content.length);
-		} catch (RemoteException e1) {
-			e1.printStackTrace();
-		}
+		// Ecriture du contenu sur le fichier
+		//
 		try {
 			Files.write(f.toPath(), content, StandardOpenOption.CREATE);
 		} catch (IOException e) {
@@ -196,17 +205,20 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 
 	}
-	
+
+	/*
+	 * Récupérer la taille d'un fichier
+	 */
 	@Override
 	public long getSize(String filename) throws RemoteException {
-		
+
 		List<byte[]> file = subRetrieve(filename);
-		
+
 		long result = 0;
 		for(byte[] bArray : file) {
 			result += bArray.length;
 		}
-		
+
 		return result;
 	}
 

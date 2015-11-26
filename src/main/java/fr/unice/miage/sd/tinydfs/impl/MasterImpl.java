@@ -28,6 +28,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	private String rootFolder;
 	private int nbSlaves;
 
+	// Références sur le Slave direct de gauche et le slave direct de droite
+	//
 	private Slave slaveLeft = null;
 	private Slave slaveRight = null;
 
@@ -37,6 +39,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		this.rootFolder = rootFoler;
 		this.nbSlaves = nbSlaves;
 
+		// Thread qui attend que tous les Slaves soient crées et ajoutés au RMI
+		// Puis récupère leur référence
 		new Thread(new Runnable() {
 
 			@Override
@@ -63,10 +67,14 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		return nbSlaves;
 	}
 
+	/*
+	 * Récupération de la référence des deux Slave gauche et droite.
+	 */
 	private void initSlaves() {
 
 		if(slaveLeft != null && slaveRight != null) return;
 
+		// Récupération des deux slaves par leur id, à savoir 0 et 1 pour les deux premier.
 		try {
 			slaveLeft = (Slave) Naming.lookup("rmi://localhost/slave0");
 			slaveRight = (Slave) Naming.lookup("rmi://localhost/slave1");
@@ -80,6 +88,10 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		}
 	}
 
+	/*
+	 * Division d'un tableau de byte en une liste de tableau de byte.
+	 * La taille de la liste correspond au nombre de Slaves.
+	 */
 	private List<byte[]> splitByteArray(byte[] array) {
 
 		List<byte[]> result = new LinkedList<byte[]>();
@@ -105,11 +117,6 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 			
 		}
 
-		for(byte[] bArray : result) {
-			Logger.getInstance().log("bArray : " + bArray.length);
-		}
-		
-		
 		return result;
 
 	}
@@ -133,17 +140,17 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		saveList(filename, bytes);
 	}
 
+	/*
+	 * Sauvegarde d'une liste de tableau de byte par les Slaves.
+	 */
 	private void saveList(String filename, List<byte[]> bytes) {
 
+		// Divison de la liste de tableau de byte en 2 parties égales
+		//
 		List<byte[]> leftList = new LinkedList<byte[]>(bytes.subList(0, bytes.size() / 2));
 		List<byte[]> rightList = new LinkedList<byte[]>(bytes.subList(bytes.size()/2,bytes.size()));
 
-		Logger.getInstance().log("LeftList : " + leftList.size() + " " + leftList.toString());
-		Logger.getInstance().log("rightList : " + rightList.size() + " " + rightList.toString());
-		
-		//List<byte[]> leftList = Lists.partition(bytes, 2).get(0);
-		//List<byte[]> rightList = Lists.partition(bytes, 2).get(1);
-		
+		// Sauvegarde de chaque liste par un Slave
 		try {
 			slaveLeft.subSave(filename, leftList);
 			slaveRight.subSave(filename, rightList);
@@ -157,10 +164,17 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	@Override
 	public File retrieveFile(String filename) throws RemoteException {
 
+		// Récupération de la liste des tableau de byte
+		//
 		List<byte[]> totalList = getTotalList(filename);
 
+		// Contrôle d'uniformité de la liste
+		// Retour null si la liste n'est pas complète
+		//
 		if(totalList == null) return null;
 
+		// Ecriture des bytes dans un fichier pour pouvoir le renvoyer.
+		//
 		File f = new File(rootFolder, filename);
 		if(f.exists()) f.delete();
 
@@ -175,9 +189,14 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	@Override
 	public byte[] retrieveBytes(String filename) throws RemoteException {
-		
+
+		// Récupération de la liste des tableau de byte
+		//
 		List<byte[]> totalList = getTotalList(filename);
 
+		// Contrôle d'uniformité de la liste
+		// Retour null si la liste n'est pas complète
+		//
 		if(totalList == null) return null;
 
 		return getByteArrayFromList(totalList);
@@ -185,9 +204,15 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	private List<byte[]> getTotalList(String filename) throws RemoteException {
 
+		// Récupération des deux parties de la liste.
+		// Liste gauche par le Slave de gauche et liste droite par le Slave de droite
+		//
 		List<byte[]> leftList = slaveLeft.subRetrieve(filename);
 		List<byte[]> rightList = slaveRight.subRetrieve(filename);
 
+		// Contrôle d'uniformité de la liste
+		// Retour null si la liste n'est pas complète
+		//
 		if(leftList == null || rightList == null) return null;
 
 		List<byte[]> totalList = new LinkedList<byte[]>();
@@ -197,6 +222,9 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		return totalList;
 	}
 
+	/*
+	 * Comptage de la taille des byte d'une liste de tableau de byte
+	 */
 	private int getSizeOfList(List<byte[]> bytes) {
 
 		int result = 0;
@@ -204,20 +232,14 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		for(byte[] byteArray : bytes) {
 			result += byteArray.length;
 		}
-
-		Logger.getInstance().log("MasterImpl getSizeOfList : " + result);
 		
 		return result;
 
 	}
 
-	@Override
-	public String toString() {
-			return "MasterImpl [storageServiceName=" + storageServiceName + ", rootFolder=" + rootFolder + ", nbSlaves="
-					+ nbSlaves + "]";
-		
-	}
-
+	/*
+	 * Transformation d'une liste de tableau de byte en un tableau de byte
+	 */
 	private byte[] getByteArrayFromList(List<byte[]> bytes) {
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(getSizeOfList(bytes));
@@ -234,6 +256,12 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	public long getSize(String filename) throws RemoteException {
 		
 		return slaveLeft.getSize(filename) + slaveRight.getSize(filename);
+	}
+
+	@Override
+	public List<byte[]> retrieveParts(String filename) throws RemoteException {
+		
+		return getTotalList(filename);
 	}
 
 }
