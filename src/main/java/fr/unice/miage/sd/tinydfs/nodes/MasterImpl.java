@@ -228,4 +228,33 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		return baos.toByteArray();
 	}
 
+	/* (non-Javadoc)
+	 * @see fr.unice.miage.sd.tinydfs.nodes.Master#addSlave(fr.unice.miage.sd.tinydfs.nodes.Slave)
+	 */
+	@Override
+	public boolean addSlave(Slave slave) throws RemoteException {
+		int i = 0;
+		for(; i < slaves.length; i++){
+			if( slaves[i] == null ){
+				slaves[i] = slave;
+				break;
+			}
+		}
+		
+		if( slave != slaves[i] ){
+			return false;
+		}
+		
+		//create the link with the parent
+		if( i > 1){
+			int indexParent = ( i >> 1 ) - 1; // (i / 2) -1
+			if( (i & 1) == 0 ){ // i is divisible by 2
+				slaves[indexParent].setLeftSlave(slave);
+			}else{
+				slaves[indexParent].setRightSlave(slave);
+			}
+		}
+		
+		return true;
+	}
 }

@@ -17,5 +17,15 @@ public interface Master extends Remote {
 	public File retrieveFile(String filename) throws RemoteException;
 	
 	public byte[] retrieveBytes(String filename) throws RemoteException;
+	
+	// -------------------------------------- Methode add
+	/**
+	 * Allow to add a slave to a master.
+	 * The master create links between the new slave and parent
+	 * @param slave
+	 * @return true, if add
+	 * @throws RemoteException
+	 */
+	public boolean addSlave(Slave slave) throws RemoteException;
 
 }
