@@ -69,7 +69,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		int overflow = (int) (file.length() % slaves.length);
 		BufferedInputStream bis = null;
 		byte[] buffer;
-
+		
 		try {
 			bis = new BufferedInputStream(new FileInputStream(file));
 			for (byte indexPart = 0; bis.available() > 0; indexPart++) {
@@ -123,7 +123,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 				System.arraycopy(fileContent, 0, buffer, 1, sizePart + overflow);
 			} else {
 				buffer = new byte[sizePart + 1];
-				int indexSrc = indexPart * sizePart;
+				int indexSrc = indexPart * sizePart + overflow;
 				System.arraycopy(fileContent, indexSrc, buffer, 1, sizePart);
 			}
 
