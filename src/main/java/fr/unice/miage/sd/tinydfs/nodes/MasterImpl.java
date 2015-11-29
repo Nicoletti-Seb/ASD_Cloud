@@ -115,16 +115,15 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		int overflow = (int) (fileContent.length % slaves.length);
 		byte [] buffer = null;
 		
-		for (byte indexPart = 0; indexPart > slaves.length; indexPart++) {
+		for (byte indexPart = 0; indexPart < slaves.length; indexPart++) {
 			if( indexPart == 0 ){
 				buffer = new byte [sizePart + overflow + 1];
-				System.arraycopy(fileContent, 0, buffer, 0, sizePart + overflow);
+				System.arraycopy(fileContent, 0, buffer, 1, sizePart + overflow);
 			}
 			else{
 				buffer = new byte[sizePart + 1 ];
 				int indexSrc = indexPart * sizePart;
-				int indexDest = indexSrc + indexPart + 1;
-				System.arraycopy(fileContent, indexSrc, buffer, indexDest, sizePart);
+				System.arraycopy(fileContent, indexSrc, buffer, 1, sizePart);
 			}
 			
 			buffer[0] = indexPart;
@@ -167,7 +166,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 				else{
 					data = popFileBlockAtIndex(indexPart, subFileContentRight);
 				}
-				bos.write(data, 1, data.length);
+				bos.write(data, 1, data.length-1);
 			}
 			
 			bos.close();
@@ -222,7 +221,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 			else{
 				data = popFileBlockAtIndex(indexPart, subFileContentRight);
 			}
-			baos.write(data, 1, data.length);
+			baos.write(data, 1, data.length - 1);
 		}
 		
 		return baos.toByteArray();
@@ -241,7 +240,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 			}
 		}
 		
-		if( slave != slaves[i] ){
+		if( i == slaves.length ){
 			return false;
 		}
 		
