@@ -1,5 +1,6 @@
 package fr.unice.miage.sd.tinydfs.main;
 
+import java.io.File;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -13,8 +14,14 @@ public class MasterMain {
 	// Usage: java fr.unice.miage.sd.tinydfs.main.MasterMain storage_service_name dfs_root_folder nb_slaves
 	public static void main(String[] args) {		
 		String storageServiceName = args[0];
-		String dfsRootFolder = args[1];
+		String dfsRootFolder = args[1] + "/Master/";
 		int nbSlaves = Integer.parseInt(args[2]);
+		
+		//Verify folder exist
+		File folder = new File(dfsRootFolder);
+		if( !folder.exists() ){
+			folder.mkdirs();
+		}
 		
 		// Create master and register it
 		try {
