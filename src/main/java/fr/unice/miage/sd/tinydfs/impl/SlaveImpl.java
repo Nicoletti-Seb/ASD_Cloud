@@ -49,7 +49,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 				try {
 
 					try {
-						slaveLeft = (Slave) Naming.lookup("rmi://" +SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId +2));
+						slaveLeft = (Slave) Naming.lookup("rmi://" + SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId +2));
 					} catch(NotBoundException e) {
 						// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
 						//e.printStackTrace();
@@ -57,7 +57,7 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 					}
 
 					try {
-						slaveRight = (Slave) Naming.lookup("rmi://" +SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId + 3));
+						slaveRight = (Slave) Naming.lookup("rmi://" + SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId + 3));
 					} catch(NotBoundException e) {
 						// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
 						//e.printStackTrace();

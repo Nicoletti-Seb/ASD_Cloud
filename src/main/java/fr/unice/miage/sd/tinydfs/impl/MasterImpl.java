@@ -96,10 +96,22 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 		List<byte[]> result = new LinkedList<byte[]>();
 
+		// Calcul de la différence entre une taille de fichier parfaite par rapport à notre nombre de slave
+		//
 		int diff = array.length % nbSlaves;
+		
+		// Calcul de la taille d'une part du fichier, la soustraction de la différence nous assure de la divisibilité de la taille du fichier
+		//
 		int lengthOfPart = (array.length - diff) / nbSlaves;
+		
+		// Index actuel du calcul
+		//
 		int currentIndex = 0;
 
+		// L'algorithme est le suivant :
+		// _ Si il reste de la différence on ajoute un byte à la part du Slave
+		// _ Si tout le surplus est ajouté, on copie la part du Slave
+		//
 		for(int i = 0; i < nbSlaves; i++) {
 
 			if(diff > 0) {
@@ -155,7 +167,6 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 			slaveLeft.subSave(filename, leftList);
 			slaveRight.subSave(filename, rightList);
 			
-
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
