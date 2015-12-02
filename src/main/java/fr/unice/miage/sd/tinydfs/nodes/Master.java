@@ -28,4 +28,11 @@ public interface Master extends Remote {
 	 */
 	public boolean addSlave(Slave slave) throws RemoteException;
 
+	/**
+	 * Get the file's size
+	 * @param filename
+	 * @return
+	 * @throws RemoteException
+	 */
+	public int getSizeFile(String filename) throws RemoteException;
 }

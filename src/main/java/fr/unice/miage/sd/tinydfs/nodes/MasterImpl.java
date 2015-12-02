@@ -302,4 +302,14 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 		return true;
 	}
+
+	@Override
+	public int getSizeFile(String filename) throws RemoteException {
+		if( slaves[0] == null || slaves[1] == null ){
+			return -1;
+		}
+		
+		//Reduce the first byte to build the file.
+		return slaves[0].getSizeFile(filename) + slaves[1].getSizeFile(filename) - slaves.length;
+	}
 }
