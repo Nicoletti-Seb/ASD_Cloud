@@ -90,7 +90,7 @@ public class ClientsTest {
 		File expectedFile = new File(this.getClass().getResource(
 				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
 		Path path = Paths.get(this.getClass().getResource(
-				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
+				Constants.BINARY_SAMPLE_FILE_PATH).getPath().substring(1));
 		BufferedOutputStream bos = null;
 		File retrievedFile = null;
 
@@ -160,6 +160,43 @@ public class ClientsTest {
 		catch (RemoteException e) {
 			e.printStackTrace();
 		}
+		
+		clean();
 	}
 
+	/**
+	 * Removes all files create during the test
+	 */
+	private static void clean(){
+		try {
+			File folderMaster = new File(master.getDfsRootFolder());
+			File folderSlave = new File(master.getDfsRootFolder() + "/../Slave/");
+			
+			cleanFolder(folderMaster);
+			cleanFolder(folderSlave);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	/**
+	 * Remove all files in a directory
+	 * @param folder
+	 */
+	private static void cleanFolder(File folder){
+		
+		if( !folder.exists() || !folder.isDirectory() ){
+			return;
+		}
+		
+		for(File f : folder.listFiles() ){
+			if( f.isDirectory() ){
+				cleanFolder(f);
+			}
+			else{
+				f.delete();
+			}
+		}
+	}
 }
