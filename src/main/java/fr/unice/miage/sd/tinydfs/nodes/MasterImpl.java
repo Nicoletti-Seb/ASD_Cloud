@@ -1,19 +1,12 @@
 package fr.unice.miage.sd.tinydfs.nodes;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+
+import fr.unice.miage.sd.tinydfs.main.files.ManagerFiles;
 
 /**
  * The Class MasterImpl.
@@ -27,7 +20,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	private Slave[] slaves;
 
-	private String dfsRootFolder;
+	private ManagerFiles managerFiles;
 
 	/**
 	 * Instantiates a new master impl.
@@ -38,7 +31,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	public MasterImpl(int nbSlaves, String dfsRootFolder) throws RemoteException {
 		super();
 		this.slaves = new Slave[nbSlaves];
-		this.dfsRootFolder = dfsRootFolder;
+		managerFiles = new ManagerFiles(dfsRootFolder);
 	}
 
 	/*
@@ -46,7 +39,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public String getDfsRootFolder() throws RemoteException {
-		return dfsRootFolder;
+		return managerFiles.getDfsRootFolder();
 	}
 
 	/*
@@ -63,46 +56,12 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public void saveFile(File file) throws RemoteException {
-		List<byte[]> subFileContentRight = new ArrayList<>();
-		List<byte[]> subFileContentLeft = new ArrayList<>();
-		int sizePart = (int) (file.length() / slaves.length);
-		int overflow = (int) (file.length() % slaves.length);
-		BufferedInputStream bis = null;
-		byte[] buffer;
-		
-		try {
-			bis = new BufferedInputStream(new FileInputStream(file));
-			for (byte indexPart = 0; bis.available() > 0; indexPart++) {
-				if (indexPart == 0) {
-					buffer = new byte[sizePart + overflow + 1];
-					bis.read(buffer, 1, sizePart + overflow);
-				} else {
-					buffer = new byte[sizePart + 1];
-					bis.read(buffer, 1, sizePart);
-				}
-				buffer[0] = indexPart;
+		List<byte[]> partFile = managerFiles.cutFile(file, getNbSlaves());
 
-				if (indexPart % 2 == 0) {
-					subFileContentLeft.add(buffer);
-				} else {
-					subFileContentRight.add(buffer);
-				}
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (bis != null) {
-					bis.close();
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		slaves[0].subSave(file.getName(), subFileContentLeft);
-		slaves[1].subSave(file.getName(), subFileContentRight);
+		int middleIndex = getNbSlaves() >> 1; // div by 2;
+		
+		slaves[0].subSave(file.getName(), new LinkedList<>(partFile.subList(0, middleIndex)) );
+		slaves[1].subSave(file.getName(), new LinkedList<>(partFile.subList(middleIndex, partFile.size())) );
 	}
 
 	/*
@@ -111,34 +70,12 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public void saveBytes(String filename, byte[] fileContent) throws RemoteException {
-		List<byte[]> subFileContentRight = new ArrayList<>();
-		List<byte[]> subFileContentLeft = new ArrayList<>();
-		int sizePart = (int) (fileContent.length / slaves.length);
-		int overflow = (int) (fileContent.length % slaves.length);
-		byte[] buffer = null;
+		List<byte[]> partFile = managerFiles.cutByteArray(fileContent, getNbSlaves());
 
-		for (byte indexPart = 0; indexPart < slaves.length; indexPart++) {
-			if (indexPart == 0) {
-				buffer = new byte[sizePart + overflow + 1];
-				System.arraycopy(fileContent, 0, buffer, 1, sizePart + overflow);
-			} else {
-				buffer = new byte[sizePart + 1];
-				int indexSrc = indexPart * sizePart + overflow;
-				System.arraycopy(fileContent, indexSrc, buffer, 1, sizePart);
-			}
+		int middleIndex = getNbSlaves() >> 1; // div by 2;
 
-			buffer[0] = indexPart;
-
-			if (indexPart % 2 == 0) {
-				subFileContentLeft.add(buffer);
-			} else {
-				subFileContentRight.add(buffer);
-			}
-
-		}
-
-		slaves[0].subSave(filename, subFileContentLeft);
-		slaves[1].subSave(filename, subFileContentRight);
+		slaves[0].subSave(filename, new LinkedList<>(partFile.subList(0, middleIndex)));
+		slaves[1].subSave(filename, new LinkedList<>(partFile.subList(middleIndex, partFile.size())));
 	}
 
 	/*
@@ -158,24 +95,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		saveListBlockFile(filename, subFileContentLeft);
 		saveListBlockFile(filename, subFileContentRight);
 
-		// Build the file
-		try {
-			File file = new File(dfsRootFolder + "/" + filename);
-			file.createNewFile();
-			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
-
-			for (byte indexPart = 0; indexPart < slaves.length; indexPart++) {
-				byte[] data = readBlockFile(filename, indexPart);
-				bos.write(data, 1, data.length - 1);
-			}
-
-			bos.close();
-			return file;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return null;
+		// Build and return the file
+		return managerFiles.buildFile(filename, getNbSlaves());
 	}
 
 	/**
@@ -188,58 +109,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	private void saveListBlockFile(String filename, List<byte[]> list) {
 		for (byte[] block : list) {
-			File file = new File(dfsRootFolder + "/" + filename + "-" + block[0]);
-			saveBlockFile(file, block);
+			managerFiles.saveFile(filename + "-" + block[0], block);
 		}
-	}
-
-	/**
-	 * Allow to save the data block in a file
-	 * 
-	 * @param file
-	 * @param data
-	 */
-	private void saveBlockFile(File file, byte[] data) {
-		BufferedOutputStream bos = null;
-		try {
-
-			if (!file.exists()) {
-				file.createNewFile();
-			}
-
-			bos = new BufferedOutputStream(new FileOutputStream(file));
-			bos.write(data);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (bos != null) {
-				try {
-					bos.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
-	/**
-	 * Read the file contain the data block at indexPart.
-	 * 
-	 * @param filename
-	 * @param indexPart
-	 * @return
-	 */
-	private byte[] readBlockFile(String filename, int indexPart) {
-		try {
-			File file = new File(dfsRootFolder + "/" + filename + "-" + indexPart);
-			return Files.readAllBytes(Paths.get(file.getAbsolutePath()));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return null;
 	}
 
 	/*
@@ -259,14 +130,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		saveListBlockFile(filename, subFileContentLeft);
 		saveListBlockFile(filename, subFileContentRight);
 
-		// Build the file
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		for (byte indexPart = 0; indexPart < slaves.length; indexPart++) {
-			byte[] data = readBlockFile(filename, indexPart);
-			baos.write(data, 1, data.length - 1);
-		}
-
-		return baos.toByteArray();
+		// Build and return the byte array
+		return managerFiles.buildByteArray(filename, getNbSlaves());
 	}
 
 	/*
@@ -279,14 +144,14 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	@Override
 	public boolean addSlave(Slave slave) throws RemoteException {
 		int i = 0;
-		for (; i < slaves.length; i++) {
+		for (; i < getNbSlaves(); i++) {
 			if (slaves[i] == null) {
 				slaves[i] = slave;
 				break;
 			}
 		}
 
-		if (i == slaves.length) {
+		if (i == getNbSlaves()) {
 			return false;
 		}
 
@@ -305,11 +170,11 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	@Override
 	public int getSizeFile(String filename) throws RemoteException {
-		if( slaves[0] == null || slaves[1] == null ){
+		if (slaves[0] == null || slaves[1] == null) {
 			return -1;
 		}
-		
-		//Reduce the first byte to build the file.
-		return slaves[0].getSizeFile(filename) + slaves[1].getSizeFile(filename) - slaves.length;
+
+		// Reduce the first byte to build the file.
+		return slaves[0].getSizeFile(filename) + slaves[1].getSizeFile(filename) - getNbSlaves();
 	}
 }
