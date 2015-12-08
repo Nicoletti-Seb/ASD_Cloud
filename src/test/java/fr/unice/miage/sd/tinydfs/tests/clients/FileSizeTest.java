@@ -118,7 +118,7 @@ public class FileSizeTest {
 			
 			master.saveFile(expectedFile);
 			
-			retrieveSizeFile = master.getSizeFile(Constants.TEXTUAL_SAMPLE_FILE_PATH);
+			retrieveSizeFile = master.getSizeFile(expectedFile.getName());
 		} 
 		catch (IOException e) {
 			e.printStackTrace();

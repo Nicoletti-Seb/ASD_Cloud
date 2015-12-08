@@ -22,6 +22,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	private ManagerFiles managerFiles;
 
+	private List<String> fileSaving;
+
 	/**
 	 * Instantiates a new master impl.
 	 *
@@ -32,6 +34,7 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		super();
 		this.slaves = new Slave[nbSlaves];
 		managerFiles = new ManagerFiles(dfsRootFolder);
+		fileSaving = new LinkedList<>();
 	}
 
 	/*
@@ -55,13 +58,29 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 * 
 	 */
 	@Override
-	public void saveFile(File file) throws RemoteException {
-		List<byte[]> partFile = managerFiles.cutFile(file, getNbSlaves());
+	public void saveFile(final File file) throws RemoteException {
+		fileSaving.add(file.getName());
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					List<byte[]> partFile = managerFiles.cutFile(file, getNbSlaves());
 
-		int middleIndex = getNbSlaves() >> 1; // div by 2;
-		
-		slaves[0].subSave(file.getName(), new LinkedList<>(partFile.subList(0, middleIndex)) );
-		slaves[1].subSave(file.getName(), new LinkedList<>(partFile.subList(middleIndex, partFile.size())) );
+					int middleIndex = getNbSlaves() >> 1; // div by 2;
+
+					slaves[0].subSave(file.getName(), new LinkedList<>(partFile.subList(0, middleIndex)));
+					slaves[1].subSave(file.getName(), new LinkedList<>(partFile.subList(middleIndex, partFile.size())));
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+
+				fileSaving.remove(file.getName());
+				
+				synchronized (MasterImpl.this) {
+					MasterImpl.this.notifyAll();
+				}
+			}
+		}).start();
 	}
 
 	/*
@@ -69,13 +88,30 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 * byte[])
 	 */
 	@Override
-	public void saveBytes(String filename, byte[] fileContent) throws RemoteException {
-		List<byte[]> partFile = managerFiles.cutByteArray(fileContent, getNbSlaves());
+	public void saveBytes(final String filename, final byte[] fileContent) throws RemoteException {
+		fileSaving.add(filename);
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					List<byte[]> partFile = managerFiles.cutByteArray(fileContent, getNbSlaves());
 
-		int middleIndex = getNbSlaves() >> 1; // div by 2;
+					int middleIndex = getNbSlaves() >> 1; // div by 2;
 
-		slaves[0].subSave(filename, new LinkedList<>(partFile.subList(0, middleIndex)));
-		slaves[1].subSave(filename, new LinkedList<>(partFile.subList(middleIndex, partFile.size())));
+					slaves[0].subSave(filename, new LinkedList<>(partFile.subList(0, middleIndex)));
+					slaves[1].subSave(filename, new LinkedList<>(partFile.subList(middleIndex, partFile.size())));
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+
+				fileSaving.remove(filename);
+				
+				synchronized (MasterImpl.this) {
+					MasterImpl.this.notifyAll();
+				}
+				
+			}
+		}).start();
 	}
 
 	/*
@@ -84,6 +120,9 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public File retrieveFile(String filename) throws RemoteException {
+		waitFileSaving(filename);
+
+		// retrieve file
 		List<byte[]> subFileContentLeft = slaves[0].subRetrieve(filename);
 		List<byte[]> subFileContentRight = slaves[1].subRetrieve(filename);
 
@@ -97,6 +136,16 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 		// Build and return the file
 		return managerFiles.buildFile(filename, getNbSlaves());
+	}
+
+	private synchronized void waitFileSaving(String filename) {
+		try {
+			while (fileSaving.contains(filename)) {
+				wait();
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -119,6 +168,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	 */
 	@Override
 	public byte[] retrieveBytes(String filename) throws RemoteException {
+		waitFileSaving(filename);
+
 		List<byte[]> subFileContentLeft = slaves[0].subRetrieve(filename);
 		List<byte[]> subFileContentRight = slaves[1].subRetrieve(filename);
 
@@ -173,6 +224,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		if (slaves[0] == null || slaves[1] == null) {
 			return -1;
 		}
+		
+		waitFileSaving(filename);
 
 		// Reduce the first byte to build the file.
 		return slaves[0].getSizeFile(filename) + slaves[1].getSizeFile(filename) - getNbSlaves();
