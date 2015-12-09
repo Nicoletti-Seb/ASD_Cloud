@@ -11,6 +11,16 @@ import fr.unice.miage.sd.tinydfs.main.files.ManagerFiles;
 /**
  * The Class MasterImpl.
  * 
+ * Strategy to devise and build a file:
+ * 	 - the first byte, in the byte array, contain the number of block
+ * 	   Blocks are in ascending order and the index start at 0.
+ * 
+ * The distribution of size file:
+ * 	 - the first file build contain the same size than other 
+ * 	   more the overflow ( the overflow > 0 if file's size is not 
+ * 	   divisible by the number of slaves).
+ *   - Others file contains the same size.
+ * 
  */
 public class MasterImpl extends UnicastRemoteObject implements Master {
 
