@@ -1,58 +1,45 @@
 package fr.unice.miage.sd.tinydfs.nodes;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.LinkedList;
 import java.util.List;
 
+import fr.unice.miage.sd.tinydfs.main.files.ManagerFiles;
+
+/**
+ * The Class SlaveImpl.
+ */
 public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
 	private static final long serialVersionUID = 1L;
 
-	private String dfsRootFolder;
+	private ManagerFiles managerFiles;
 	private Slave slaveR;
 	private Slave slaveL;
 	private int id;
 
-	protected SlaveImpl(int id, String dfsRootFolder) throws RemoteException {
+	/**
+	 * Instantiates a new slave impl.
+	 *
+	 * @param id
+	 *            the id
+	 * @param dfsRootFolder
+	 *            the dfs root folder
+	 * @throws RemoteException
+	 *             the remote exception
+	 */
+	public SlaveImpl(int id, String dfsRootFolder) throws RemoteException {
 		super();
 		this.id = id;
-		this.dfsRootFolder = dfsRootFolder;
+		managerFiles = new ManagerFiles(dfsRootFolder);
 	}
 
-	@Override
-	public int getId() throws RemoteException {
-		return id;
-	}
-
-	@Override
-	public Slave getLeftSlave() throws RemoteException {
-		return slaveL;
-	}
-
-	@Override
-	public Slave getRightSlave() throws RemoteException {
-		return slaveR;
-	}
-
-	@Override
-	public void setLeftSlave(Slave slave) throws RemoteException {
-		slaveL = slave;
-	}
-
-	@Override
-	public void setRightSlave(Slave slave) throws RemoteException {
-		slaveR = slave;
-	}
-
+	/*
+	 * @see fr.unice.miage.sd.tinydfs.nodes.Slave#subSave(java.lang.String,
+	 * java.util.List)
+	 */
 	@Override
 	public void subSave(String filename, List<byte[]> subFileContent) throws RemoteException {
 		// Get and remove the first element
@@ -60,78 +47,99 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 		subFileContent.remove(data);
 
 		// Save the element
-		File file = new File(dfsRootFolder + "/" + filename);
-		savefile(file, data);
+		managerFiles.saveFile(filename, data);
+
 		if (slaveR == null || slaveL == null) {
 			return;
 		}
 
 		// cut the list & save
 		int middle = subFileContent.size() / 2;
-		slaveL.subSave(filename, subFileContent.subList(0, middle));
-		slaveR.subSave(filename, subFileContent.subList(middle, subFileContent.size()));
 
+		// The subfile must be wrap because sublist
+		// return an instance of 'RandomAccessSubList'
+		// which is not serializable.
+		slaveL.subSave(filename, new LinkedList<>(subFileContent.subList(0, middle)));
+		slaveR.subSave(filename, new LinkedList<>(subFileContent.subList(middle, subFileContent.size())));
 	}
 
-	/**
-	 * Allow to save the data in a file
-	 * 
-	 * @param file
-	 * @param data
+	/*
+	 * @see fr.unice.miage.sd.tinydfs.nodes.Slave#subRetrieve(java.lang.String)
 	 */
-	private void savefile(File file, byte[] data) {
-		BufferedOutputStream bos = null;
-		try {
-			bos = new BufferedOutputStream(new FileOutputStream(file));
-			bos.write(data);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (bos != null) {
-				try {
-					bos.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
 	@Override
 	public List<byte[]> subRetrieve(String filename) throws RemoteException {
-		File file = new File(dfsRootFolder + "/" + filename);
-		if (!file.exists()){
+		File file = new File(managerFiles.getDfsRootFolder() + "/" + filename);
+		if (!file.exists()) {
 			return null;
 		}
-		
+
 		List<byte[]> dataList = null;
-		if( slaveL == null || slaveR == null ){
+		if (slaveL == null || slaveR == null) {
 			dataList = new LinkedList<>();
-		}
-		else{
+		} else {
 			dataList = slaveL.subRetrieve(filename);
 			dataList.addAll(slaveR.subRetrieve(filename));
 		}
-		dataList.add(readFile(filename));
-		
+		dataList.add(managerFiles.readFile(filename));
+
 		return dataList;
 	}
-	
-	/**
-	 * Read all data in a file
-	 * @param filename
-	 * @return
+
+	/*
+	 * @see fr.unice.miage.sd.tinydfs.nodes.Slave#getSizeFile(java.lang.String)
 	 */
-	private byte[] readFile(String filename){
-		try {
-			Path path = Paths.get("file:///" + dfsRootFolder + "/" + filename );
-			return Files.readAllBytes(path);
-		} catch (IOException e) {
-			e.printStackTrace();
+	@Override
+	public int getSizeFile(String filename) throws RemoteException {
+		int size = managerFiles.getSizeFile(filename);
+
+		if (slaveL != null && slaveR != null) {
+			size += slaveL.getSizeFile(filename) + slaveR.getSizeFile(filename);
 		}
-		
-		return null;
+
+		return size;
+	}
+
+	/*
+	 * @see fr.unice.miage.sd.tinydfs.nodes.Slave#getId()
+	 */
+	@Override
+	public int getId() throws RemoteException {
+		return id;
+	}
+
+	/*
+	 * @see fr.unice.miage.sd.tinydfs.nodes.Slave#getLeftSlave()
+	 */
+	@Override
+	public Slave getLeftSlave() throws RemoteException {
+		return slaveL;
+	}
+
+	/*
+	 * @see fr.unice.miage.sd.tinydfs.nodes.Slave#getRightSlave()
+	 */
+	@Override
+	public Slave getRightSlave() throws RemoteException {
+		return slaveR;
+	}
+
+	/*
+	 * @see
+	 * fr.unice.miage.sd.tinydfs.nodes.Slave#setLeftSlave(fr.unice.miage.sd.
+	 * tinydfs.nodes.Slave)
+	 */
+	@Override
+	public void setLeftSlave(Slave slave) throws RemoteException {
+		slaveL = slave;
+	}
+
+	/*
+	 * @see
+	 * fr.unice.miage.sd.tinydfs.nodes.Slave#setRightSlave(fr.unice.miage.sd.
+	 * tinydfs.nodes.Slave)
+	 */
+	@Override
+	public void setRightSlave(Slave slave) throws RemoteException {
+		slaveR = slave;
 	}
 }
