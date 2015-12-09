@@ -14,6 +14,9 @@ import java.rmi.RemoteException;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * The Class ManagerFiles.
+ */
 public class ManagerFiles {
 
 	private String dfsRootFolder;
@@ -66,18 +69,12 @@ public class ManagerFiles {
 	}
 
 	/**
-	 * Return the file's size.
+	 * Cut the file to nbPart parts.
 	 * 
-	 * @param filename
-	 * @return
-	 * @throws RemoteException
+	 * @param file
+	 * @param nbPart
+	 * @return the parts list
 	 */
-	public int getSizeFile(String filename) throws RemoteException {
-		File file = new File(dfsRootFolder + "/" + filename);
-		return (int) file.length();
-	}
-
-	// -------------------------------------- Methode to cut
 	public List<byte[]> cutFile(File file, int nbPart) {
 		List<byte[]> partList = new LinkedList<>();
 		int sizePart = (int) (file.length() / nbPart);
@@ -109,6 +106,13 @@ public class ManagerFiles {
 		return partList;
 	}
 
+	/**
+	 * Cut the file to nbPart parts.
+	 * 
+	 * @param data
+	 * @param nbPart
+	 * @return the parts list
+	 */
 	public List<byte[]> cutByteArray(byte[] data, int nbPart) {
 		List<byte[]> partList = new LinkedList<>();
 		int sizePart = (int) (data.length / nbPart);
@@ -132,7 +136,13 @@ public class ManagerFiles {
 		return partList;
 	}
 
-	// -------------------------------------- Methode to build
+	/**
+	 * Search and build the file cut to nbPart parts.
+	 * 
+	 * @param filename
+	 * @param nbPart
+	 * @return the file build
+	 */
 	public File buildFile(String filename, int nbPart) {
 		File file = null;
 		try {
@@ -155,6 +165,13 @@ public class ManagerFiles {
 		return file;
 	}
 
+	/**
+	 * Search and build the file cut to nbPart parts.
+	 * 
+	 * @param filename
+	 * @param nbPart
+	 * @return the file build
+	 */
 	public byte[] buildByteArray(String filename, int nbPart) {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -167,8 +184,22 @@ public class ManagerFiles {
 	}
 
 	// -------------------------------------- Getter
+	/**
+	 * @return the DfsRootFolder
+	 */
 	public String getDfsRootFolder() {
 		return dfsRootFolder;
 	}
 
+	/**
+	 * Return the file's size.
+	 * 
+	 * @param filename
+	 * @return
+	 * @throws RemoteException
+	 */
+	public int getSizeFile(String filename) throws RemoteException {
+		File file = new File(dfsRootFolder + "/" + filename);
+		return (int) file.length();
+	}
 }
