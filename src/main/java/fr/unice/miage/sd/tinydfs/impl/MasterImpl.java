@@ -182,8 +182,12 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 					e.printStackTrace();
 				}
 				
+				// Suppression du nom du fichier de la liste des fichiers en cours de sauvegarde
+				//
 				filesSaving.remove(filename);
 
+				// On notifie de la fin de la sauvegarde d'un fichier
+				//
 				synchronized (MasterImpl.this) {
 					MasterImpl.this.notifyAll();
 				}
@@ -257,6 +261,9 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		return totalList;
 	}
 	
+	/*
+	 * Attente de la sauvegarde d'un fichier
+	 */
 	private synchronized void waitFileSaving(String filename) {
 		try {
 			while (filesSaving.contains(filename)) {
