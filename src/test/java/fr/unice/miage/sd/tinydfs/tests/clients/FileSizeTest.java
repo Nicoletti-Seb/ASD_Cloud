@@ -1,6 +1,5 @@
 package fr.unice.miage.sd.tinydfs.tests.clients;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -22,11 +21,10 @@ import org.junit.Test;
 import fr.unice.miage.sd.tinydfs.nodes.Master;
 import fr.unice.miage.sd.tinydfs.tests.config.Constants;
 
-
 public class FileSizeTest {
 
 	private static String storageServiceName;
-	private static String registryHost; 
+	private static String registryHost;
 	private static Master master;
 
 	@BeforeClass
@@ -37,55 +35,44 @@ public class FileSizeTest {
 		Properties prop = new Properties();
 		InputStream input = null;
 		try {
-			input = new FileInputStream(FileSizeTest.class.getResource(
-					Constants.PROPERTIES_FILE_PATH).getFile());
+			input = new FileInputStream(FileSizeTest.class.getResource(Constants.PROPERTIES_FILE_PATH).getFile());
 			prop.load(input);
-			storageServiceName = prop.getProperty(
-					Constants.SERVICE_NAME_PROPERTY_KEY);
-			registryHost = prop.getProperty(
-					Constants.REGISTRY_HOST_PROPERTY_KEY);
-		} 
-		catch (IOException e) {
+			storageServiceName = prop.getProperty(Constants.SERVICE_NAME_PROPERTY_KEY);
+			registryHost = prop.getProperty(Constants.REGISTRY_HOST_PROPERTY_KEY);
+		} catch (IOException e) {
 			e.printStackTrace();
-		} 
-		finally {
+		} finally {
 			if (input != null) {
 				try {
 					input.close();
-				}
-				catch (IOException e) {
+				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
 		}
 		try {
-			Registry registry = LocateRegistry.getRegistry(
-					registryHost, Registry.REGISTRY_PORT);
+			Registry registry = LocateRegistry.getRegistry(registryHost, Registry.REGISTRY_PORT);
 			master = (Master) registry.lookup(storageServiceName);
-		} 
-		catch (RemoteException | NotBoundException e) {
+		} catch (RemoteException | NotBoundException e) {
 			e.printStackTrace();
 			System.err.println("[ClientsTest] No master found, exiting.");
 			System.exit(1);
 		}
 		try {
 			Thread.sleep(500);
-		} 
-		catch (InterruptedException e) {
+		} catch (InterruptedException e) {
 			e.printStackTrace();
-		}		
-		
+		}
+
 	}
-	
 
 	@Test
 	/**
-	 * Saves bytes from a file through the master, and checks 
-	 * if this size with original file are equal.
+	 * Saves bytes from a file through the master, and checks if this size with
+	 * original file are equal.
 	 */
 	public void binaryFileSizeTest() {
-		Path path = Paths.get(this.getClass().getResource(
-				Constants.BINARY_SAMPLE_FILE_PATH).getPath().substring(1));
+		Path path = Paths.get(this.getClass().getResource(Constants.BINARY_SAMPLE_FILE_PATH).getPath().substring(1));
 		int retrieveSizeFile = 0;
 		int expectedSizeFile = 0;
 
@@ -94,48 +81,45 @@ public class FileSizeTest {
 			expectedSizeFile = data.length;
 			master.saveBytes(Constants.BINARY_SAMPLE_FILE_NAME, data);
 			retrieveSizeFile = master.getSizeFile(Constants.BINARY_SAMPLE_FILE_NAME);
-		}
-		catch (IOException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		Assert.assertEquals(expectedSizeFile, retrieveSizeFile);
 	}
 
 	@Test
 	/**
-	 * Saves bytes from a file through the master, and checks 
-	 * if this size with original file are equal.
+	 * Saves bytes from a file through the master, and checks if this size with
+	 * original file are equal.
 	 */
 	public void textualFileSizeTest() {
 		int retrieveSizeFile = 0;
 		int expectedSizeFile = 0;
-		
+
 		try {
-			File expectedFile = new File(this.getClass().getResource(
-					Constants.TEXTUAL_SAMPLE_FILE_PATH).getFile());
+			File expectedFile = new File(this.getClass().getResource(Constants.TEXTUAL_SAMPLE_FILE_PATH).getFile());
 			expectedSizeFile = (int) expectedFile.length();
-			
+
 			master.saveFile(expectedFile);
-			
+
 			retrieveSizeFile = master.getSizeFile(expectedFile.getName());
-		} 
-		catch (IOException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		Assert.assertEquals(expectedSizeFile, retrieveSizeFile);
 	}
-	
+
 	/**
 	 * Removes all files create during the test
 	 */
 	@After
-	public void clean(){
+	public void clean() {
 		try {
 			File folderMaster = new File(master.getDfsRootFolder());
 			File folderSlave = new File(master.getDfsRootFolder() + "/../Slave/");
-			
+
 			cleanFolder(folderMaster);
 			cleanFolder(folderSlave);
 		} catch (RemoteException e) {
@@ -143,22 +127,22 @@ public class FileSizeTest {
 		}
 
 	}
-	
+
 	/**
 	 * Remove all files in a directory
+	 * 
 	 * @param folder
 	 */
-	private void cleanFolder(File folder){
-		
-		if( !folder.exists() || !folder.isDirectory() ){
+	private void cleanFolder(File folder) {
+
+		if (!folder.exists() || !folder.isDirectory()) {
 			return;
 		}
-		
-		for(File f : folder.listFiles() ){
-			if( f.isDirectory() ){
+
+		for (File f : folder.listFiles()) {
+			if (f.isDirectory()) {
 				cleanFolder(f);
-			}
-			else{
+			} else {
 				f.delete();
 			}
 		}

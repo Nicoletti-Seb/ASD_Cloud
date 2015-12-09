@@ -78,14 +78,14 @@ public class FileBalancedTest {
 		try {
 			byte[] data = Files.readAllBytes(path);
 			master.saveBytes(Constants.BINARY_SAMPLE_FILE_NAME, data);
-			
+
 			Thread.sleep(300);
 
 			File slaveFolder = new File(master.getDfsRootFolder() + "/../Slave/");
 			List<File> fileList = searchFile(slaveFolder, Constants.BINARY_SAMPLE_FILE_NAME);
 			Assert.assertEquals(master.getNbSlaves(), fileList.size());
-			
-			filesAreBalanced( data.length, fileList);
+
+			filesAreBalanced(data.length, fileList);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -104,14 +104,14 @@ public class FileBalancedTest {
 		try {
 			File expectedFile = new File(this.getClass().getResource(Constants.TEXTUAL_SAMPLE_FILE_PATH).getFile());
 			master.saveFile(expectedFile);
-			
+
 			Thread.sleep(300);
-			
+
 			File slaveFolder = new File(master.getDfsRootFolder() + "/../Slave/");
 			List<File> fileList = searchFile(slaveFolder, Constants.TEXTUAL_SAMPLE_FILE_NAME);
 			Assert.assertEquals(master.getNbSlaves(), fileList.size());
-			
-			filesAreBalanced((int)expectedFile.length(), fileList);
+
+			filesAreBalanced((int) expectedFile.length(), fileList);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -120,9 +120,10 @@ public class FileBalancedTest {
 		}
 
 	}
-	
+
 	/**
 	 * Test if the file list is balanced
+	 * 
 	 * @param sizeFile
 	 * @param fileList
 	 */
@@ -157,33 +158,32 @@ public class FileBalancedTest {
 	 * @return
 	 */
 	private List<File> searchFile(File src, String filename) {
-		if( !src.exists() ){
+		if (!src.exists()) {
 			return null;
 		}
-		
+
 		List<File> fileList = new LinkedList<>();
-		for( File f : src.listFiles() ){
-			
-			if( f.isDirectory() ){
+		for (File f : src.listFiles()) {
+
+			if (f.isDirectory()) {
 				fileList.addAll(searchFile(f, filename));
-			}
-			else if( f.getName().equals(filename) ){
+			} else if (f.getName().equals(filename)) {
 				fileList.add(f);
 			}
 		}
-		
+
 		return fileList;
 	}
-	
+
 	/**
 	 * Removes all files create during the test
 	 */
 	@After
-	public void clean(){
+	public void clean() {
 		try {
 			File folderMaster = new File(master.getDfsRootFolder());
 			File folderSlave = new File(master.getDfsRootFolder() + "/../Slave/");
-			
+
 			cleanFolder(folderMaster);
 			cleanFolder(folderSlave);
 		} catch (RemoteException e) {
@@ -191,22 +191,22 @@ public class FileBalancedTest {
 		}
 
 	}
-	
+
 	/**
 	 * Remove all files in a directory
+	 * 
 	 * @param folder
 	 */
-	private void cleanFolder(File folder){
-		
-		if( !folder.exists() || !folder.isDirectory() ){
+	private void cleanFolder(File folder) {
+
+		if (!folder.exists() || !folder.isDirectory()) {
 			return;
 		}
-		
-		for(File f : folder.listFiles() ){
-			if( f.isDirectory() ){
+
+		for (File f : folder.listFiles()) {
+			if (f.isDirectory()) {
 				cleanFolder(f);
-			}
-			else{
+			} else {
 				f.delete();
 			}
 		}
