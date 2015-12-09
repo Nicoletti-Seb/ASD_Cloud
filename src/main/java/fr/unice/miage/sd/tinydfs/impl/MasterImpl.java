@@ -27,6 +27,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	private String storageServiceName;
 	private String rootFolder;
 	private int nbSlaves;
+	
+	private List<String> filesSaving;
 
 	// Références sur le Slave direct de gauche et le slave direct de droite
 	//
@@ -38,6 +40,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		this.storageServiceName = storageServiceName;
 		this.rootFolder = rootFoler;
 		this.nbSlaves = nbSlaves;
+		
+		filesSaving = new LinkedList<String>();
 
 		// Thread qui attend que tous les Slaves soient crées et ajoutés au RMI
 		// Puis récupère leur référence
@@ -155,21 +159,39 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	/*
 	 * Sauvegarde d'une liste de tableau de byte par les Slaves.
 	 */
-	private void saveList(String filename, List<byte[]> bytes) {
+	private void saveList(final String filename, final List<byte[]> bytes) {
 
-		// Divison de la liste de tableau de byte en 2 parties égales
-		//
-		List<byte[]> leftList = new LinkedList<byte[]>(bytes.subList(0, bytes.size() / 2));
-		List<byte[]> rightList = new LinkedList<byte[]>(bytes.subList(bytes.size()/2,bytes.size()));
-
-		// Sauvegarde de chaque liste par un Slave
-		try {
-			slaveLeft.subSave(filename, leftList);
-			slaveRight.subSave(filename, rightList);
+		filesSaving.add(filename);
+		
+		new Thread(new Runnable() {
 			
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
+			@Override
+			public void run() {
+				
+				// Divison de la liste de tableau de byte en 2 parties égales
+				//
+				List<byte[]> leftList = new LinkedList<byte[]>(bytes.subList(0, bytes.size() / 2));
+				List<byte[]> rightList = new LinkedList<byte[]>(bytes.subList(bytes.size()/2,bytes.size()));
+
+				// Sauvegarde de chaque liste par un Slave
+				try {
+					slaveLeft.subSave(filename, leftList);
+					slaveRight.subSave(filename, rightList);
+					
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+				
+				filesSaving.remove(filename);
+
+				synchronized (MasterImpl.this) {
+					MasterImpl.this.notifyAll();
+				}
+				
+			}
+		}).start();
+		
+		
 	}
 
 	@Override
@@ -215,6 +237,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	private List<byte[]> getTotalList(String filename) throws RemoteException {
 
+		waitFileSaving(filename);
+		
 		// Récupération des deux parties de la liste.
 		// Liste gauche par le Slave de gauche et liste droite par le Slave de droite
 		//
@@ -231,6 +255,16 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		totalList.addAll(rightList);
 
 		return totalList;
+	}
+	
+	private synchronized void waitFileSaving(String filename) {
+		try {
+			while (filesSaving.contains(filename)) {
+				wait();
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/*
@@ -265,6 +299,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 
 	@Override
 	public long getSize(String filename) throws RemoteException {
+		
+		waitFileSaving(filename);
 		
 		return slaveLeft.getSize(filename) + slaveRight.getSize(filename);
 	}
