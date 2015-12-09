@@ -21,5 +21,7 @@ public interface Slave extends Remote {
 	public List<byte[]> subRetrieve(String filename) throws RemoteException;
 	
 	public long getSize(String filename) throws RemoteException;
+	
+	public void bind() throws RemoteException;
 
 }

@@ -42,23 +42,6 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		this.nbSlaves = nbSlaves;
 		
 		filesSaving = new LinkedList<String>();
-
-		// Thread qui attend que tous les Slaves soient crées et ajoutés au RMI
-		// Puis récupère leur référence
-		new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-
-				try {
-					Thread.sleep(3500);
-				} catch (InterruptedException e1) {
-					e1.printStackTrace();
-				}
-
-				initSlaves();
-			}
-		}).start();
 	}
 
 	@Override
@@ -79,9 +62,15 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		if(slaveLeft != null && slaveRight != null) return;
 
 		// Récupération des deux slaves par leur id, à savoir 0 et 1 pour les deux premier.
+		//
 		try {
 			slaveLeft = (Slave) Naming.lookup("rmi://localhost/slave0");
 			slaveRight = (Slave) Naming.lookup("rmi://localhost/slave1");
+			
+			// Lancement de la séquence de binding de l'arbre
+			//
+			if(slaveLeft != null) slaveLeft.bind();
+			if(slaveRight != null) slaveRight.bind();
 			
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
@@ -140,6 +129,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	@Override
 	public void saveFile(File file) throws RemoteException {
 
+		initSlaves();
+		
 		try {
 			List<byte[]> bytes = splitByteArray(Files.readAllBytes(file.toPath()));
 			saveList(file.getName(), bytes);
@@ -152,6 +143,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	@Override
 	public void saveBytes(String filename, byte[] fileContent) throws RemoteException {
 
+		initSlaves();
+		
 		List<byte[]> bytes = splitByteArray(fileContent);
 		saveList(filename, bytes);
 	}
@@ -201,6 +194,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	@Override
 	public File retrieveFile(String filename) throws RemoteException {
 
+		initSlaves();
+		
 		// Récupération de la liste des tableau de byte
 		//
 		List<byte[]> totalList = getTotalList(filename);
@@ -227,6 +222,8 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 	@Override
 	public byte[] retrieveBytes(String filename) throws RemoteException {
 
+		initSlaves();
+		
 		// Récupération de la liste des tableau de byte
 		//
 		List<byte[]> totalList = getTotalList(filename);

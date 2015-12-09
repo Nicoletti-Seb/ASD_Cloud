@@ -17,6 +17,8 @@ import fr.unice.miage.sd.tinydfs.nodes.Slave;
 
 public class SlaveImpl extends UnicastRemoteObject implements Slave {
 
+	private static final long serialVersionUID = 7884543114695525732L;
+	
 	private String masterHost;
 	private String dfsRootFolder;
 	private int slaveId;
@@ -30,48 +32,47 @@ public class SlaveImpl extends UnicastRemoteObject implements Slave {
 		this.dfsRootFolder = dfsRootFolder;
 		this.slaveId = slaveId;
 
-		/*
-		 * Thread d'attente de l'ajout de tous les Slaves au RMI
-		 * Récupération du slave de droite et de gauche à l'aide de la formule 
-		 * SlaveLeft = 2*idSlave + 2 ; SlaveRight = 2*idSlave + 3
-		 */
-		new Thread(new Runnable() {
+	}
+	
+	/*
+	 * Binding des Slaves
+	 * Récupération du slave de droite et de gauche à l'aide de la formule 
+	 * SlaveLeft = 2*idSlave + 2 ; SlaveRight = 2*idSlave + 3
+	 */
+	@Override
+	public void bind() throws RemoteException {
+		
+		try {
 
-			@Override
-			public void run() {
-
-				try {
-					Thread.sleep(2500);
-				} catch (InterruptedException e1) {
-					e1.printStackTrace();
-				}
-
-				try {
-
-					try {
-						slaveLeft = (Slave) Naming.lookup("rmi://" + SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId +2));
-					} catch(NotBoundException e) {
-						// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
-						//e.printStackTrace();
-						slaveLeft = null;
-					}
-
-					try {
-						slaveRight = (Slave) Naming.lookup("rmi://" + SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId + 3));
-					} catch(NotBoundException e) {
-						// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
-						//e.printStackTrace();
-						slaveRight = null;
-					}
-
-				} catch (MalformedURLException e) {
-					e.printStackTrace();
-				}catch (RemoteException e) {
-					e.printStackTrace();
-				}
+			try {
+				slaveLeft = (Slave) Naming.lookup("rmi://" + SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId +2));
+				
+				// On rebind récursivement si il existe un Slave fils
+				//
+				slaveLeft.bind();
+			} catch(NotBoundException e) {
+				// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
+				//e.printStackTrace();
+				slaveLeft = null;
 			}
-		}).start();
 
+			try {
+				slaveRight = (Slave) Naming.lookup("rmi://" + SlaveImpl.this.masterHost + "/" + "slave"+(2*SlaveImpl.this.slaveId + 3));
+				
+				// On rebind récursivement si il existe un Slave fils
+				//
+				slaveRight.bind();
+			} catch(NotBoundException e) {
+				// Commentaire du PrintStackTrace puis l'erreur est attendue et gérée pour ne pas surcharger la console.
+				//e.printStackTrace();
+				slaveRight = null;
+			}
+
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}catch (RemoteException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
