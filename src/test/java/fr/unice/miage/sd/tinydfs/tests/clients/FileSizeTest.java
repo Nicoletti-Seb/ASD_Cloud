@@ -13,7 +13,6 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Properties;
 
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -72,7 +71,7 @@ public class FileSizeTest {
 	 * original file are equal.
 	 */
 	public void binaryFileSizeTest() {
-		Path path = Paths.get(this.getClass().getResource(Constants.BINARY_SAMPLE_FILE_PATH).getPath().substring(1));
+		Path path = Paths.get(this.getClass().getResource(Constants.BINARY_SAMPLE_FILE_PATH).getPath());
 		int retrieveSizeFile = 0;
 		int expectedSizeFile = 0;
 
@@ -109,42 +108,5 @@ public class FileSizeTest {
 		}
 
 		Assert.assertEquals(expectedSizeFile, retrieveSizeFile);
-	}
-
-	/**
-	 * Removes all files create during the test
-	 */
-	@After
-	public void clean() {
-		try {
-			File folderMaster = new File(master.getDfsRootFolder());
-			File folderSlave = new File(master.getDfsRootFolder() + "/../Slave/");
-
-			cleanFolder(folderMaster);
-			cleanFolder(folderSlave);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-
-	}
-
-	/**
-	 * Remove all files in a directory
-	 * 
-	 * @param folder
-	 */
-	private void cleanFolder(File folder) {
-
-		if (!folder.exists() || !folder.isDirectory()) {
-			return;
-		}
-
-		for (File f : folder.listFiles()) {
-			if (f.isDirectory()) {
-				cleanFolder(f);
-			} else {
-				f.delete();
-			}
-		}
 	}
 }

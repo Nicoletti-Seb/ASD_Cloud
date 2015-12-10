@@ -1,5 +1,6 @@
 package fr.unice.miage.sd.tinydfs.tests.clients;
 
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,14 +21,15 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import junitx.framework.FileAssert;
 import fr.unice.miage.sd.tinydfs.nodes.Master;
 import fr.unice.miage.sd.tinydfs.tests.config.Constants;
+import junitx.framework.FileAssert;
+
 
 public class ClientsTest {
 
 	private static String storageServiceName;
-	private static String registryHost;
+	private static String registryHost; 
 	private static Master master;
 	private static long testStartTime;
 
@@ -40,67 +42,83 @@ public class ClientsTest {
 		Properties prop = new Properties();
 		InputStream input = null;
 		try {
-			input = new FileInputStream(ClientsTest.class.getResource(Constants.PROPERTIES_FILE_PATH).getFile());
+			input = new FileInputStream(ClientsTest.class.getResource(
+					Constants.PROPERTIES_FILE_PATH).getFile());
 			prop.load(input);
-			storageServiceName = prop.getProperty(Constants.SERVICE_NAME_PROPERTY_KEY);
-			registryHost = prop.getProperty(Constants.REGISTRY_HOST_PROPERTY_KEY);
-		} catch (IOException e) {
+			storageServiceName = prop.getProperty(
+					Constants.SERVICE_NAME_PROPERTY_KEY);
+			registryHost = prop.getProperty(
+					Constants.REGISTRY_HOST_PROPERTY_KEY);
+		} 
+		catch (IOException e) {
 			e.printStackTrace();
-		} finally {
+		} 
+		finally {
 			if (input != null) {
 				try {
 					input.close();
-				} catch (IOException e) {
+				}
+				catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
 		}
 		try {
-			Registry registry = LocateRegistry.getRegistry(registryHost, Registry.REGISTRY_PORT);
+			Registry registry = LocateRegistry.getRegistry(
+					registryHost, Registry.REGISTRY_PORT);
 			master = (Master) registry.lookup(storageServiceName);
-		} catch (RemoteException | NotBoundException e) {
+		} 
+		catch (RemoteException | NotBoundException e) {
 			e.printStackTrace();
 			System.err.println("[ClientsTest] No master found, exiting.");
 			System.exit(1);
 		}
 		try {
 			Thread.sleep(500);
-		} catch (InterruptedException e) {
+		} 
+		catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
 
 	@Test
 	/**
-	 * Saves bytes from a file through the master, retrieves them, and checks
+	 * Saves bytes from a file through the master, retrieves them, and checks 
 	 * that the final and original files are equal.
 	 */
 	public void binaryClientTest() {
-		File expectedFile = new File(this.getClass().getResource(Constants.BINARY_SAMPLE_FILE_PATH).getFile());
-		Path path = Paths.get(this.getClass().getResource(Constants.BINARY_SAMPLE_FILE_PATH).getPath().substring(1));
+		File expectedFile = new File(this.getClass().getResource(
+				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
+		Path path = Paths.get(this.getClass().getResource(
+				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
 		BufferedOutputStream bos = null;
 		File retrievedFile = null;
 
 		try {
 			byte[] data = Files.readAllBytes(path);
 			master.saveBytes(Constants.BINARY_SAMPLE_FILE_NAME, data);
-			byte[] retrievedData = master.retrieveBytes(Constants.BINARY_SAMPLE_FILE_NAME);
-			retrievedFile = new File(master.getDfsRootFolder() + "/" + Constants.BINARY_SAMPLE_FILE_NAME);
+			byte[] retrievedData = master.retrieveBytes(
+					Constants.BINARY_SAMPLE_FILE_NAME);
+			retrievedFile = new File(master.getDfsRootFolder() + "/" + 
+					Constants.BINARY_SAMPLE_FILE_NAME);
 			retrievedFile.createNewFile();
 			bos = new BufferedOutputStream(new FileOutputStream(retrievedFile));
 			bos.write(retrievedData);
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			e.printStackTrace();
-		} finally {
+		}
+		finally {
 			if (bos != null) {
 				try {
 					bos.close();
-				} catch (IOException e) {
+				} 
+				catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
 		}
-
+		
 		FileAssert.assertBinaryEquals(expectedFile, retrievedFile);
 	}
 
@@ -111,20 +129,22 @@ public class ClientsTest {
 	 */
 	public void textualClientTest() {
 		try {
-			File expectedFile = new File(this.getClass().getResource(Constants.TEXTUAL_SAMPLE_FILE_PATH).getFile());
+			File expectedFile = new File(this.getClass().getResource(
+					Constants.TEXTUAL_SAMPLE_FILE_PATH).getFile());
 			master.saveFile(expectedFile);
-			File retrievedFile = master.retrieveFile(Constants.TEXTUAL_SAMPLE_FILE_NAME);
+			File retrievedFile = master.retrieveFile(
+					Constants.TEXTUAL_SAMPLE_FILE_NAME);
 			retrievedFile.createNewFile();
 			FileAssert.assertBinaryEquals(expectedFile, retrievedFile);
-		} catch (IOException e) {
+		} 
+		catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
 	@AfterClass
 	/**
-	 * Checks that the produced files are more recent than the test starting
-	 * time.
+	 * Checks that the produced files are more recent than the test starting time.
 	 */
 	public static void tearDown() {
 		try {
@@ -133,50 +153,13 @@ public class ClientsTest {
 			File[] folderFiles = dfsRootFolder.listFiles();
 			int expectedNbFiles = master.getNbSlaves() * 2 + 2;
 			Assert.assertTrue(folderFiles.length == expectedNbFiles);
-			;
-			for (File file : folderFiles) {
+			for (File file: folderFiles) {
 				Assert.assertTrue(file.lastModified() > testStartTime);
 			}
-		} catch (RemoteException e) {
+		} 
+		catch (RemoteException e) {
 			e.printStackTrace();
 		}
-
-		clean();
 	}
 
-	/**
-	 * Removes all files create during the test
-	 */
-	private static void clean() {
-		try {
-			File folderMaster = new File(master.getDfsRootFolder());
-			File folderSlave = new File(master.getDfsRootFolder() + "/../Slave/");
-
-			cleanFolder(folderMaster);
-			cleanFolder(folderSlave);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-
-	}
-
-	/**
-	 * Remove all files in a directory
-	 * 
-	 * @param folder
-	 */
-	private static void cleanFolder(File folder) {
-
-		if (!folder.exists() || !folder.isDirectory()) {
-			return;
-		}
-
-		for (File f : folder.listFiles()) {
-			if (f.isDirectory()) {
-				cleanFolder(f);
-			} else {
-				f.delete();
-			}
-		}
-	}
 }

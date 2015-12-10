@@ -1,12 +1,11 @@
 package fr.unice.miage.sd.tinydfs.main;
 
 import java.io.File;
-import java.rmi.NotBoundException;
+import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
-import fr.unice.miage.sd.tinydfs.nodes.Master;
 import fr.unice.miage.sd.tinydfs.nodes.Slave;
 import fr.unice.miage.sd.tinydfs.nodes.SlaveImpl;
 
@@ -30,13 +29,12 @@ public class SlaveMain {
 		try {
 			Slave slave = new SlaveImpl(slaveId, dfsRootFolder);
 			Registry registry = LocateRegistry.getRegistry(Registry.REGISTRY_PORT);
-			Master server = (Master) registry.lookup("rmi://" + masterHost + "/Master");
-			server.addSlave(slave);
+			registry.bind("rmi://" + masterHost + "/Slave-"+slaveId, slave);
 
 			System.out.println("Slave connected : " + slaveId);
 		} catch (RemoteException e) {
 			e.printStackTrace();
-		} catch (NotBoundException e) {
+		} catch (AlreadyBoundException e) {
 			e.printStackTrace();
 		}
 
