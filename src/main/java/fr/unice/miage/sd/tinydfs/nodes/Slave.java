@@ -56,7 +56,6 @@ public interface Slave extends Remote {
 	 */
 	public List<byte[]> subRetrieve(String filename) throws RemoteException;
 	
-	// -------------------------------------- Méthod add
 	/**
 	 * @param filename
 	 * @return the size of file associate with filename.

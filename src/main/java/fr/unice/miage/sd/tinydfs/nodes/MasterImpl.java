@@ -170,38 +170,6 @@ public class MasterImpl extends UnicastRemoteObject implements Master {
 		return managerFiles.buildByteArray(filename, getNbSlaves());
 	}
 
-	/*
-	 * @see
-	 * fr.unice.miage.sd.tinydfs.nodes.Master#addSlave(fr.unice.miage.sd.tinydfs
-	 * .nodes.Slave)
-	 */
-	@Override
-	public boolean addSlave(Slave slave) throws RemoteException {
-		int i = 0;
-		for (; i < getNbSlaves(); i++) {
-			if (slaves[i] == null) {
-				slaves[i] = slave;
-				break;
-			}
-		}
-
-		if (i == getNbSlaves()) {
-			return false;
-		}
-
-		// create the link with parents
-		if (i > 1) {
-			int indexParent = (i >> 1) - 1; // (i / 2) -1
-			if ((i & 1) == 0) { // i is divisible by 2
-				slaves[indexParent].setLeftSlave(slave);
-			} else {
-				slaves[indexParent].setRightSlave(slave);
-			}
-		}
-
-		return true;
-	}
-
 	/**
 	 * Method to synchronized threads call in saves methods.
 	 * 
