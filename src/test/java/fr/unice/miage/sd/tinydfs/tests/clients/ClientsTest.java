@@ -88,9 +88,10 @@ public class ClientsTest {
 	 */
 	public void binaryClientTest() {
 		File expectedFile = new File(this.getClass().getResource(
-				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
+				Constants.BINARY_SAMPLE_FILE_PATH).getFile().substring(1));
+		
 		Path path = Paths.get(this.getClass().getResource(
-				Constants.BINARY_SAMPLE_FILE_PATH).getFile());
+				Constants.BINARY_SAMPLE_FILE_PATH).getFile().substring(1));
 		BufferedOutputStream bos = null;
 		File retrievedFile = null;
 
@@ -99,6 +100,7 @@ public class ClientsTest {
 			master.saveBytes(Constants.BINARY_SAMPLE_FILE_NAME, data);
 			byte[] retrievedData = master.retrieveBytes(
 					Constants.BINARY_SAMPLE_FILE_NAME);
+			
 			retrievedFile = new File(master.getDfsRootFolder() + "/" + 
 					Constants.BINARY_SAMPLE_FILE_NAME);
 			retrievedFile.createNewFile();
@@ -135,6 +137,7 @@ public class ClientsTest {
 			File retrievedFile = master.retrieveFile(
 					Constants.TEXTUAL_SAMPLE_FILE_NAME);
 			retrievedFile.createNewFile();
+
 			FileAssert.assertBinaryEquals(expectedFile, retrievedFile);
 		} 
 		catch (IOException e) {
@@ -152,6 +155,7 @@ public class ClientsTest {
 			File dfsRootFolder = new File(dfsRootFolderPath);
 			File[] folderFiles = dfsRootFolder.listFiles();
 			int expectedNbFiles = master.getNbSlaves() * 2 + 2;
+			
 			Assert.assertTrue(folderFiles.length == expectedNbFiles);;
 			for (File file: folderFiles) {
 				Assert.assertTrue(file.lastModified() > testStartTime);
@@ -162,4 +166,5 @@ public class ClientsTest {
 		}
 	}
 
+	
 }

@@ -17,5 +17,14 @@ public interface Master extends Remote {
 	public File retrieveFile(String filename) throws RemoteException;
 	
 	public byte[] retrieveBytes(String filename) throws RemoteException;
+	
+	public float getSize(String fileName) throws RemoteException;
+	
+	public void setLeftSlave(Slave slave) throws RemoteException;
 
+	public void setRightSlave(Slave slave) throws RemoteException;
+	
+	public void construire() throws RemoteException;
+	
+	
 }
