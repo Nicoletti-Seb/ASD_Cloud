@@ -37,6 +37,8 @@ public class ManagerFiles {
 			if (!file.exists()) {
 				file.createNewFile();
 			}
+			
+			file.setLastModified(System.currentTimeMillis());
 
 			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
 			try {

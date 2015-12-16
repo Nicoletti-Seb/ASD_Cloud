@@ -77,8 +77,7 @@ public class FileBalancedTest {
 		try {
 			byte[] data = Files.readAllBytes(path);
 			master.saveBytes(Constants.BINARY_SAMPLE_FILE_NAME, data);
-
-			Thread.sleep(300);
+			master.retrieveBytes(Constants.BINARY_SAMPLE_FILE_NAME);
 
 			File slaveFolder = new File(master.getDfsRootFolder() + "/../Slave/");
 			List<File> fileList = searchFile(slaveFolder, Constants.BINARY_SAMPLE_FILE_NAME);
@@ -87,8 +86,6 @@ public class FileBalancedTest {
 			filesAreBalanced(data.length, fileList);
 
 		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
@@ -103,8 +100,7 @@ public class FileBalancedTest {
 		try {
 			File expectedFile = new File(this.getClass().getResource(Constants.TEXTUAL_SAMPLE_FILE_PATH).getFile());
 			master.saveFile(expectedFile);
-
-			Thread.sleep(300);
+			master.retrieveBytes(expectedFile.getName());
 
 			File slaveFolder = new File(master.getDfsRootFolder() + "/../Slave/");
 			List<File> fileList = searchFile(slaveFolder, Constants.TEXTUAL_SAMPLE_FILE_NAME);
@@ -113,8 +109,6 @@ public class FileBalancedTest {
 			filesAreBalanced((int) expectedFile.length(), fileList);
 
 		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 

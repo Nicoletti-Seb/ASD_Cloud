@@ -7,20 +7,24 @@ import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.util.TimerTask;
 
+/**
+ *  This class allow to create a server.
+ *  
+ *  - the class wait the connection slaves and create the tree.
+ *
+ */
 public class ServerCreator extends TimerTask{
 	
 	private Registry registry;
-	private String serviceName;
-	private String dfsRootFolder;
 	
 	private Slave[] slaves;
 	private int nbConnected;
 	
 	public ServerCreator(Registry registry, String serviceName, String dfsRootFolder, int nbSlaves) {
 		this.registry = registry;
-		this.serviceName = serviceName;
-		this.dfsRootFolder = dfsRootFolder;
 		this.slaves = new Slave[nbSlaves];
+		
+		createMaster(serviceName, dfsRootFolder, slaves);
 	}
 
 	@Override
@@ -31,7 +35,6 @@ public class ServerCreator extends TimerTask{
 			addSlave(slave);
 			
 			if( slaves.length <= nbConnected ){
-				createMaster();
 				cancel();
 			}
 			
@@ -45,6 +48,12 @@ public class ServerCreator extends TimerTask{
 		
 	}
 	
+	/**
+	 * Add the slave in the tree.
+	 * @param slave
+	 * @return true, if the slave is added.
+	 * @throws RemoteException
+	 */
 	private boolean addSlave(Slave slave) throws RemoteException {
 		slaves[nbConnected] = slave;
 
@@ -63,7 +72,13 @@ public class ServerCreator extends TimerTask{
 		return true;
 	}
 	
-	private void createMaster(){
+	/**
+	 * Create the master 
+	 * @param serviceName
+	 * @param dfsRootFolder
+	 * @param slaves
+	 */
+	private void createMaster(String serviceName, String dfsRootFolder, Slave[] slaves){
 		try {
 			Master master = new MasterImpl(slaves, dfsRootFolder);
 			registry.bind(serviceName, master);
